@@ -17,11 +17,12 @@ Algorithm:
        Solve Ax=b system. 
 """
 import numpy as np
+import matplotlib.pyplot as plt
 
 # CONSTANTS
 GAMMA = 1.4
 
-# --------------------------------------------------------
+
 def set_initial_state(N, sampletest=None):
     """Set initial state based on the test number chosen
     (Rho, RhoU, E)"""
@@ -77,65 +78,121 @@ def set_initial_state(N, sampletest=None):
         
 
     # Convert to conservative variables
-    U[2, :] = U[0, :] * (
-        U[1, :]**2 / 2 + U[2, :] / (GAMMA - 1) / U[0, :])
+    U[2, :] = 0.5 * U[0, :] * U[1, :]**2 + U[2, :] / (GAMMA - 1)
     U[1, :] = U[1, :] *  U[0, :]
 
     return U
 
-# -----------------------------------------------------------
+
 def calculate_cell_F(U):
     """Calculate the conservative flux vector"""
-    F = np.zeros(U.shape)
+    F = np.zeros(3)
 
-    p = (U[2, :] / U[1, :] - (
-        U[1, :] / U[0, :])**2 / 2) * (GAMMA - 1) * U[0, :]  
+    p = (GAMMA - 1) * (U[2] - 0.5 * U[1]**2 / U[0])
     
-    F[0, :] = U[1, :]
-    F[1, :] = U[1, :]**2 / U[0, :] + p
-    F[2, :] = U[1, :] / U[0, :] * (U[2, :] + p)
+    F[0] = U[1]
+    F[1] = U[1]**2 / U[0] + p
+    F[2] = U[1] / U[0] * (U[2] + p)
 
     return F
-    
-# -----------------------------------------------------------
-def calculate_fluxes(x, xface, U, F, typeflux=None):
+
+
+def calculate_fluxes(U, F, N, typeflux=None):
     """
     Use the conventional fluxes to calculate the flux
     values at the faces.
-    """
-    N = len(faces)
-    fluxes = np.zeros((3, N + 1))
 
-    if typeflux == 'Rusanov':
-        for i in range(N + 1):
-            fluxes[:, i] = 
+    Ignores the boundary faces. i.e. iface=0 and iface=N+1.
+    BCs are specified in another method. 
+    """
+    fluxes = np.zeros((3, N + 1))
     
-# ----------------------------------------------------------
+    if typeflux == 'Rusanov':
+
+        p = (GAMMA - 1) * (U[2, :] - 0.5 * U[1, :]**2 / U[0, :])
+        smax = np.abs(U[1, :] / U[0, :]) + np.sqrt(GAMMA * p / U[0, :])
+        
+        for i in range(1, N):
+            fluxes[:, i] = 0.5 * (F[:, i - 1] + F[:, i]) \
+                - 0.5 * smax[i] * (U[:, i] - U[:, i - 1])
+
+    return fluxes
+
+
+def specify_boundary_condition(U_initial):
+    """Specify BC."""
+    F_left = calculate_cell_F(U_initial[:, 0])
+    F_right = calculate_cell_F(U_initial[:, -1])
+    return F_left, F_right
+
+
+def advance(U, facefluxes, dt, dx, N, timestep='euler'):
+    """Time integration. Finite volume method."""
+    if timestep == 'euler':
+        for i in range(N):
+            U[:, i] = U[:, i] + dt / dx * (facefluxes[:, i] - facefluxes[:, i + 1])
+
+    return U
+
+
+def plot_U(x, U, **kwargs):
+    """Plot the solution."""
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(nrows=3, ncols=1)
+
+    ax[0].plot(x, U[0, :], **kwargs)
+    ax[0].set_ylabel('Rho')
+    
+    ax[1].plot(x, U[1, :]/U[0, :], **kwargs)
+    ax[1].set_ylabel('U')
+    
+    ax[2].plot(x, (GAMMA - 1) * (U[2, :] - 0.5 * U[1, :]**2 / U[0, :]), **kwargs)
+    ax[2].set_ylabel('p')
+    ax[2].set_xlabel('x')
+    plt.show()
+
+# --------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    N = 100
+    N = 400
 
     # Inputs
-    xmin = 0
-    xmax = 1
-    tmax = 1.0
+    xmin = 0.0
+    xmax = 1.0
+    tmax = 0.001
     dt = 0.001
     flux = 'Rusanov'
     
     
     # Discretize domain
-    xface = np.linspace(xmin, xmax, N+1)
-    x = np.zeros(N)
-    for i in range(N):
-        x[i] = 0.5 * (faces[i] + faces[i+1])
-    dx = np.abs(x[1] - x[0])
+    x = np.linspace(xmin ,xmax, N+1)  # Position of faces.
+    dx = np.abs(x[1] - x[0])          # Cellsize
     
     # Initialize U at t=0
-    U = set_initial_state(sampletest=1)
+    U = set_initial_state(N, sampletest=4)
+    U_initial = U * 1.0
     
     # Main loop
     t = 0.0
-    while t <= tmax:
-        F = calculate_cell_F(U)
-        fluxes = calculate_fluxes(x, xface, U, F, typeflux=flux)
-        U = advance(U, fluxes, deltaT, x)
+    while t < tmax:
+
+        F = np.zeros((3, N + 1))
+        for i in range(N):
+            F[:, i] = calculate_cell_F(U[:, i])
+               
+        facefluxes = calculate_fluxes(U, F, N, typeflux=flux)        
+        facefluxes[:, 0], facefluxes[:, -1] = specify_boundary_condition(U_initial)
+        
+        U = advance(U, facefluxes, dt, dx, N, timestep='euler')
+
+        t += dt
+
+
+    # Plot solution at t=0 and t=tmax
+    xc = np.zeros(N)
+    for i in range(N):
+        xc[i] = 0.5 * (x[i] + x[i + 1])
+
+    plot_U(xc, U_initial, color='black', ls='dotted')
+    plot_U(xc, U, color='red')
