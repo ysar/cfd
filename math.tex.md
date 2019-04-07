@@ -6,7 +6,6 @@
 
 $$
     \frac{\partial \mathbf{U}}{\partial t} + \frac{\partial \mathbf{F}}{\partial x} = 0
-    \label{1dconservelaw}
 $$
 
 where 
@@ -31,7 +30,7 @@ $$
     p = \left( \gamma - 1\right) \left( \rho E - \frac{\rho u^2}{2}\right)
 $$
 
-And $$\gamma=1.4$$ for air. Also important is the use of the sound speed
+And $\gamma=1.4$ for air. Also important is the use of the sound speed
 
 $$
     a = \sqrt{\frac{\gamma p}{\rho}}
@@ -49,22 +48,22 @@ The 1D ideal MHD equations can be given as -
 ### 1D set of conservation laws ###
 
 
-We seek to find weak solutions to this pde such that for a function $$\phi$$,
+We seek to find weak solutions to this pde such that for a function \phi,
 
 $$
     \int_\Omega \phi \left( \frac{\partial \mathbf{U}}{\partial t} + \frac{\partial \mathbf{F}}{\partial x} \right) \,dx = 0
 $$
 
-In DG method we assume the solution at element $$k$$ to take the form
+In DG method we assume the solution at element k to take the form
 
 $$
     \mathbf{u}_k = \sum_{j=1}^{p+1} \mathbf{U}_{k,j}(t)\, \phi_j(x)
 $$
 
-Where $$\phi_j(x)$$ are the basis functions we use to represent the solution in element $$k$$ and $$\mathbf{U}_{k,j}$$ are the expansion coefficients for element $k$ for the $j$th order
+Where \phi_j(x) are the basis functions we use to represent the solution in element $$k$$ and $$\mathbf{U}_{k,j}$$ are the expansion coefficients for element k for the j th order
 polynomial.
 
-Rewriting the weak form of the pde for one element $$k$$,
+Rewriting the weak form of the pde for one element k,
 $$
     \int_{\Omega_k} \phi_i \left( \frac{\partial \mathbf{U}}{\partial t} + \frac{\partial \mathbf{F}}{\partial x} \right) \,dx = 0
 $$
