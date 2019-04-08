@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
 Solve the 1D Euler equations using the 
-Discontinuous-Galerkin formulation.
-
-Algorithm - 
-    1.  
+finite-volume method.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -90,7 +87,13 @@ def calc_Fhat(ul, ur, typeflux='hlle', dx=None, dt=None):
         pass
 
 
+def advance_in_time_explicit(u, Flface, Frface, dt, dx, tsteptype='euler'):
+    """ Time marching (explicit)"""
+    if 'euler' in tsteptype:
+        return u + dt / dx * (Flface - Frface)
 
-    
+
+
+if __name__ == "__main__":
 
 
