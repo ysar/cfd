@@ -158,9 +158,10 @@ if __name__ == "__main__":
     for i in range(N):
         xc[i] = 0.5 * (x[i] + x[i + 1])
 
-    ax[0].scatter(xc, u[0, :], color='k')
-    ax[1].scatter(xc, u[1, :] / u[0, :], color='k')
-    ax[2].scatter(xc, calc_p(u), color='k')
+    kwargs = dict(color='k', s=2)
+    ax[0].scatter(xc, u[0, :], **kwargs)
+    ax[1].scatter(xc, u[1, :] / u[0, :], **kwargs)
+    ax[2].scatter(xc, calc_p(u), **kwargs)
     
     for i in range(3):
         ax[i].set_xlabel('x')
