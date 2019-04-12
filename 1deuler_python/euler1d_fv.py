@@ -57,7 +57,8 @@ def calc_Fhat(ul, ur, typeflux='hlle', dx=None, dt=None):
         Hbar = (sqrtrhol * Hl + sqrtrhor * Hr) / \
                (sqrtrhol + sqrtrhor)
 
-        cbar = np.sqrt(GAMMA * (GAMMA - 1) / (2 - GAMMA) * (Hbar - 0.5 * ubar**2))
+        cbar = np.sqrt(GAMMA * (GAMMA - 1) / (2 - GAMMA)
+                       * (Hbar - 0.5 * ubar**2))
 
         R = np.zeros((3, 3))
         R[0, :] = 1
@@ -94,7 +95,8 @@ def calc_Fhat(ul, ur, typeflux='hlle', dx=None, dt=None):
         smin = np.minimum(slmin, srmin)
         smax = np.maximum(slmax, srmax)
         
-        return 0.5 * (Fl + Fr) - 0.5 * ((smax + smin) / (smax - smin)) * (Fr - Fl) \
+        return 0.5 * (Fl + Fr) \
+            - 0.5 * ((smax + smin) / (smax - smin)) * (Fr - Fl) \
                + ((smax * smin) / (smax - smin)) * (ur - ul) 
     
     elif 'linde' in typeflux:
@@ -135,6 +137,9 @@ if __name__ == "__main__":
     u[0, midway:] = 0.125
     u[1, midway:] = 0.0
     u[2, midway:] = 0.1
+    # u[2, :] = u[2, :] / (GAMMA - 1) + u[0, :] * u[1, :]**2 / 2 
+    # u[1, :] = u[0, :] * u[1, :]
+    
     u_init = u * 1.0
     
     # Update states until tmax
@@ -144,8 +149,10 @@ if __name__ == "__main__":
         Fhat[:, 0] = calc_F(u_init[:, 0])
         Fhat[:, -1] = calc_F(u_init[:, -1]) 
         for i in range(1, N):
-            Fhat[:, i] = calc_Fhat(u[:, i - 1], u[:, i], typeflux=tflux, dx=dx, dt=dt)
-            u[:, i - 1] = advance_in_time_explicit(u[:, i - 1], Fhat[:, i - 1], Fhat[:, i], dt, dx)
+            Fhat[:, i] = calc_Fhat(u[:, i - 1], u[:, i],
+                                   typeflux=tflux, dx=dx, dt=dt)
+            u[:, i - 1] = advance_in_time_explicit(
+                u[:, i - 1], Fhat[:, i - 1], Fhat[:, i], dt, dx)
 
         t += dt
 
