@@ -18,6 +18,10 @@ methods we need (in order of - what comes to mind first)
     - advance_in_time
     - reconstruct_solution         [May need this at the end to plot solution]
 -------------------------------------------------------------------------------
+NOTES:
+    - To ravel matrix to vector use <matrix>.ravel()
+    - To unravel vector to matrix use <vector>.reshape()
+
 """
 import numpy as np
 from euler1d_fv import GAMMA, calc_p, calc_F, calc_Fhat
@@ -70,6 +74,8 @@ def calc_M(p):
     return M
 
 
+
+        
 def construct_initial_state(N, p):
     """
     Algorithm: (if using Lagrange basis)
@@ -77,21 +83,23 @@ def construct_initial_state(N, p):
         2. For each point k
             2.1. U(k, i) = u(k, j) if   i == j    else   0
     """
+    # Specify simple initial conditions based on cell averages. (will need to modify in the future)
     midway = N/2 if (N+1)%2 == 0 else (N+1) / 2
-    u = np.zeros((3, N, p + 1))
-    u[0, :midway, :] = 1.0
-    u[1, :midway, :] = 0.0
-    u[2, :midway, :] = 1.0
-    u[0, midway:, :] = 0.125
-    u[1, midway:, :] = 0.0
-    u[2, midway:, :] = 0.1
-    u[2, :, :] = u[2, :, :] / (GAMMA - 1) + u[0, :, :] * u[1, :, :]**2 / 2
-    u[1, :, :] = u[0, :, :] * u[1, :, :]
+    uc = np.zeros((N, 3))
+    uc[:midway, 0] = 1.0
+    uc[:midway, 1] = 0.0
+    uc[:midway, 2] = 1.0
+    uc[midway:, 0] = 0.125
+    uc[midway:, 1] = 0.0
+    uc[midway:, 2] = 0.1
+    uc[:, 2] = uc[:, 2] / (GAMMA - 1) + uc[:, 0] * uc[:, 1]**2 / 2
+    uc[:, 1] = uc[:, 0] * uc[:, 1]
 
-    U = np.zeros((3, N, p + 1))
+    # Calculate the expansion coefficients for each cell.
+    U = np.zeros((N, p + 1, 3))
     for k in range(N):
-        for i in range(p+1):
-            U[:, k, i] = u[:, i]
+        pass
+    
                 
     
 if __name__ == '__main__':
