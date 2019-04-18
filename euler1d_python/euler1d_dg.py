@@ -58,11 +58,21 @@ def calc_dphi_depsilon(eps, p, i):
     Calculate the derivative of the legendre basis functions in reference space
     """
     dphideps = 0
-    epsilon = np.linspace(-1, 1, p + 1)
-    for j in range(p + 1):
-        if i != j:
-            dphideps += 1 / (eps - epsilon[j])
-    return dphideps * calc_phi(eps, p, i)
+    # epsilon = np.linspace(-1, 1, p + 1)
+    # for j in range(p + 1):
+    #     if i != j:
+    #         dphideps += 1 / (eps - epsilon[j] + 1e-5)
+
+    if p == 2:
+        if i == 0:
+            return (2 * eps - 1) / 2
+        elif i == 1:
+            return 1 - 2 * eps
+        elif i == 2:
+            return (2 * eps + 1) / 2
+        else:
+            raise Exception('Order of basis exceeded.')
+        
 
 
 def calc_M(p):
@@ -99,12 +109,17 @@ def construct_initial_state(N, p):
     # Specify simple initial conditions based on cell averages. (will need to modify in the future)
     midway = int(N/2 if N%2 == 0 else (N+1) / 2)
     uc = np.zeros((N, 3))
-    uc[:midway, 0] = 1.0
-    uc[:midway, 1] = 0.0
-    uc[:midway, 2] = 1.0
-    uc[midway:, 0] = 0.125
-    uc[midway:, 1] = 0.0
-    uc[midway:, 2] = 0.1
+    # uc[:midway, 0] = 1.0
+    # uc[:midway, 1] = 0.0
+    # uc[:midway, 2] = 1.0
+    # uc[midway:, 0] = 0.125
+    # uc[midway:, 1] = 0.0
+    # uc[midway:, 2] = 0.1
+    
+    uc[:, 0] = 1.0
+    uc[:, 1] = 0.0
+    uc[:, 2] = 1.0
+    
     uc[:, 2] = uc[:, 2] / (GAMMA - 1) + uc[:, 0] * uc[:, 1]**2 / 2
     uc[:, 1] = uc[:, 0] * uc[:, 1]
 
@@ -150,10 +165,21 @@ def reconstruct_plot_solution(U, xfaces):
                     u[k, i, m] += U[k, j, m] * calc_phi(eps, p, j)
 
 
+    u[:, :, 2] = (GAMMA - 1) * (u[:, :, 2] - u[:, :, 1]**2 / u[:, :, 0] / 2)
+    u[:, :, 1] = u[:, :, 1] / u[:, :, 0]
+    
     # Plot it.
     import matplotlib.pyplot as plt
-    for k in range(N):
-        plt.plot(xrec[k, :], u[k, :, 2])
+    fig, ax = plt.subplots(3, 1, figsize=(11, 8.5))
+    for m in range(s):
+        for k in range(N):
+            ax[m].plot(xrec[k, :], u[k, :, m])
+
+    ax[0].set_ylabel(r'$\rho$')
+    ax[1].set_ylabel('$u$')
+    ax[2].set_ylabel('$p$')
+    ax[2].set_xlabel('$x$')
+    
     plt.show()
 
 
@@ -178,7 +204,7 @@ def calc_residual_part1(U):
             for j in range(p + 1):
                 dphi_deps[i, j] = calc_dphi_depsilon(eps, p, j)
                 for m in range(s):
-                    uk[i, m] += U[k, p, m] * calc_phi(eps, p, j)  
+                    uk[i, m] += U[k, j, m] * calc_phi(eps, p, j)  
             Fk[i, :] = calc_F(uk[i, :])
 
         # Do the Gaussian integral for each j and s.
@@ -190,21 +216,81 @@ def calc_residual_part1(U):
     return Res1
 
 
-                
-    
+def calc_residual_part2(U):
+    """Calculate the second part of the residual-
+    (phi F)_rightface - (phi F)_leftface 
+    """
+    N = U.shape[0]
+    p = U.shape[1] - 1
+    s = U.shape[2]
+    Res2 = np.zeros((N, p + 1, s))
+
+        
+    for k in range(N):
+
+        if k == 1:              # Boundary condition 1
+            uL_left = U[k, 0, :]
+            uR_left = U[k, 0, :]
+            uL_right = U[k, p, :]
+            uR_right = U[k + 1, 0, :]
+            
+        elif k == N - 1:        # Boundary condition 2
+            uL_left = U[k - 1, p, :]
+            uR_left = U[k, 0, :]
+            uL_right = U[k, p, :]
+            uR_right = U[k, p, :]
+            
+        else:
+            # Calculate uL_left , uR_left, uL_right and uR_right
+            uL_left = U[k - 1, p, :] 
+            uR_left = U[k, 0, :]
+            uL_right = U[k, p, :] 
+            uR_right = U[k + 1, 0, :]
+
+        Fstar_left = calc_Fhat(uL_left, uR_left)
+        Fstar_right = calc_Fhat(uL_right, uR_right)
+        
+        
+        for j in range(p + 1):
+            Res2[k, j, :] = calc_phi(1.0, p, j) * Fstar_right - calc_phi(-1.0, p, j) * Fstar_left 
+
+    return Res2
+ 
+
+
+# ==========================================================================    
 if __name__ == '__main__':
 
-    N = 10
+    N = 50
     p = 2
     xmin = 0
     xmax = 1
     xfaces = np.linspace(xmin, xmax, N + 1)
     U = construct_initial_state(N, p)
     M = calc_M(p) * (xfaces[1] - xfaces[0]) / 2
+    invM = np.linalg.inv(M)
     
     # reconstruct_plot_solution(U, xfaces)
-    Res1 = calc_residual_part1(U)
+    
+    t = 0.0
+    dt = 0.0001
+    tmax = 0.0002
+    
+    while t < tmax:
 
+        Res1 = calc_residual_part1(U)
+        Res2 = calc_residual_part2(U)
+        Res = Res1 + Res2
+        print(Res)
+    
+        for k in range(N):
+            for s in range(3):
+                U[k, :, s] += dt * np.matmul(-invM, Res[k, :, s])
+
+        t += dt
+        
+    reconstruct_plot_solution(U, xfaces)
+        
     
     
          
