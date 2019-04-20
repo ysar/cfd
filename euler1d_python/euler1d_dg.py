@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-80chars ->
+80chars -> 
 --------------------------------------------------------------------------------
 Solve the 1D Euler equations using the Discontinuous-Galerkin formulation.
 There are many moving parts to a DG code. I will try my best to disentangle all
