@@ -75,29 +75,24 @@ def calc_dphi_depsilon(eps, p, i):
     Calculate the derivative of the legendre basis functions in reference space
     """
     dphideps = 0
-    # epsilon = np.linspace(-1, 1, p + 1)
-    # for j in range(p + 1):
-    #     if i != j:
-    #         dphideps += 1 / (eps - epsilon[j] + 1e-5)
+    epsilon = np.linspace(-1, 1, p + 1)
 
-    if p == 2:
-        if i == 0:
-            return (2 * eps - 1) / 2
-        elif i == 1:
-            return (- 2 * eps)
-        elif i == 2:
-            return (2 * eps + 1) / 2
-        else:
-            raise Exception('Order of basis exceeded.')
+    denom = 1
+    for j in range(p + 1):
+        if i != j:
+            denom *= (epsilon[i] - epsilon[j])
 
-    elif p == 1:
-        if i == 0:
-            return -0.5
-        else:
-            return 0.5
+    dphideps = 0
+    for j in range(p + 1):
+        if i != j:
+            product = 1
+            for k in range(p + 1):
+                if k != j:
+                    product *= (eps - epsilon[k])
+            dphideps += product
+            
+    return dphideps / denom
 
-    elif p == 0:
-        return 0.0
 
 def calc_M(p):
     """
@@ -249,7 +244,7 @@ def calc_residual_part2(U):
     """Calculate the second part of the residual-
     (phi F)_rightface - (phi F)_leftface 
     """
-    flux = 'hlle'
+    flux = 'roe'
     N = U.shape[0]
     p = U.shape[1] - 1
     s = U.shape[2]
@@ -297,8 +292,8 @@ def calc_residual_part2(U):
 # ==========================================================================    
 if __name__ == '__main__':
 
-    N = 50
-    p = 0
+    N = 51
+    p = 2
     xmin = 0
     xmax = 1
     xfaces = np.linspace(xmin, xmax, N + 1)
@@ -309,16 +304,16 @@ if __name__ == '__main__':
     # reconstruct_plot_solution(U, xfaces)
     
     t = 0.0
-    dt = 0.001
-    tmax = 0.04
+    dt = 0.0001
+    tmax = 0.0001
     
     while t < tmax:
 
         Res1 = calc_residual_part1(U)
         Res2 = calc_residual_part2(U)
         Res = Res2 - Res1
-
-        print(Res)
+        
+        # print(Res)
         
         for k in range(N):
             for s in range(3):
